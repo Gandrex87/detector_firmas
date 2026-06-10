@@ -53,3 +53,17 @@ def test_score_tinta_con_trazo():
     r = df.score_tinta(img)
     assert r["ink_ratio"] > 0.005
     assert r["n_trazos"] >= 1
+
+
+def test_imagen_en_region_falsa_sin_imagenes(tmp_path):
+    doc = fitz.open()
+    doc.new_page(width=595, height=842)
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((50, 100), "Texto sin imagenes")
+    ruta = str(tmp_path / "sintexto.pdf")
+    doc.save(ruta); doc.close()
+
+    doc2 = fitz.open(ruta)
+    page2 = doc2[-1]
+    assert df.imagen_en_region(page2, df.REGION) is False
+    doc2.close()

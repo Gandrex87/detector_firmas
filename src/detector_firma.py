@@ -54,3 +54,21 @@ def score_tinta(region_img):
     n_trazos = int(np.count_nonzero(stats[1:, cv2.CC_STAT_AREA] >= AREA_MIN_TRAZO))
 
     return {"ink_ratio": round(ink_ratio, 5), "n_trazos": n_trazos}
+
+
+def imagen_en_region(page, region=REGION):
+    """True si hay una imagen raster colocada dentro de la región de firma,
+    y la página NO es un escaneo de página completa (tiene texto).
+    En escaneos (sin texto) esta señal no es fiable y devuelve False."""
+    texto = page.get_text().strip()
+    if not texto:
+        return False  # escaneo: toda la página es imagen; señal no aplicable
+    rect = page.rect
+    fx0, fy0, fx1, fy1 = region
+    zona = fitz.Rect(rect.width * fx0, rect.height * fy0,
+                     rect.width * fx1, rect.height * fy1)
+    for img in page.get_image_info():
+        bbox = fitz.Rect(img["bbox"])
+        if zona.intersects(bbox):
+            return True
+    return False

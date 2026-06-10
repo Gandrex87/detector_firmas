@@ -67,3 +67,39 @@ def test_imagen_en_region_falsa_sin_imagenes(tmp_path):
     page2 = doc2[-1]
     assert df.imagen_en_region(page2, df.REGION) is False
     doc2.close()
+
+
+def test_detectar_firmado_con_trazo(tmp_path):
+    doc = fitz.open()
+    doc.new_page(width=595, height=842)
+    page = doc.new_page(width=595, height=842)
+    # trazo tipo firma en zona inferior izquierda
+    page.draw_bezier(fitz.Rect(0,0,0,0).tl if False else fitz.Point(40, 760),
+                     fitz.Point(120, 700), fitz.Point(200, 800), fitz.Point(280, 740),
+                     color=(0, 0, 0), width=3)
+    page.draw_line(fitz.Point(40, 790), fitz.Point(300, 795), color=(0,0,0), width=3)
+    ruta = str(tmp_path / "firmado.pdf")
+    doc.save(ruta); doc.close()
+
+    r = df.detectar(ruta)
+    assert r["error"] is False
+    assert r["firmado"] is True
+    assert 0.0 <= r["confianza"] <= 1.0
+    assert r["pagina"] == 2
+
+
+def test_detectar_no_firmado_pagina_blanca(tmp_path):
+    doc = fitz.open()
+    doc.new_page(width=595, height=842)
+    doc.new_page(width=595, height=842)  # última en blanco
+    ruta = str(tmp_path / "blanco.pdf")
+    doc.save(ruta); doc.close()
+    r = df.detectar(ruta)
+    assert r["error"] is False
+    assert r["firmado"] is False
+
+
+def test_detectar_pdf_inexistente():
+    r = df.detectar("no_existe_xyz.pdf")
+    assert r["error"] is True
+    assert "mensaje" in r

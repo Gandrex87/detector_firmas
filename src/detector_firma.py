@@ -1,5 +1,6 @@
 # src/detector_firma.py
 """Detección de firma manuscrita en Notas de Encargo (Fase 1)."""
+import os
 import fitz
 import cv2
 import numpy as np
@@ -72,3 +73,49 @@ def imagen_en_region(page, region=REGION):
         if zona.intersects(bbox):
             return True
     return False
+
+
+def detectar(pdf_path, debug_dir=None):
+    """Detecta firma manuscrita en la última página de un PDF.
+    Devuelve un dict estructurado; nunca lanza excepción por PDF inválido."""
+    if not os.path.exists(pdf_path):
+        return {"error": True, "mensaje": f"No existe el archivo: {pdf_path}"}
+    try:
+        doc = fitz.open(pdf_path)
+        n_pag = doc.page_count
+        page = doc[-1]
+        tiene_imagen = imagen_en_region(page, REGION)
+        doc.close()
+
+        img, _rect = render_ultima_pagina(pdf_path, dpi=DPI)
+        region_img, bbox = recortar_region(img, REGION)
+        st = score_tinta(region_img)
+
+        firmado_tinta = st["ink_ratio"] >= UMBRAL_INK and st["n_trazos"] >= 1
+        firmado = bool(firmado_tinta or tiene_imagen)
+        if tiene_imagen and not firmado_tinta:
+            metodo = "imagen"
+        elif firmado_tinta:
+            metodo = "tinta"
+        else:
+            metodo = "ninguno"
+        confianza = round(min(1.0, st["ink_ratio"] / UMBRAL_INK), 3) if UMBRAL_INK else 0.0
+        if tiene_imagen:
+            confianza = max(confianza, 0.6)
+
+        if debug_dir:
+            os.makedirs(debug_dir, exist_ok=True)
+            nombre = os.path.splitext(os.path.basename(pdf_path))[0]
+            cv2.imwrite(os.path.join(debug_dir, f"{nombre}_region.png"), region_img)
+
+        return {
+            "error": False,
+            "firmado": firmado,
+            "confianza": confianza,
+            "metodo": metodo,
+            "pagina": n_pag,
+            "region": list(bbox),
+            "detalles": {**st, "imagen_en_region": tiene_imagen},
+        }
+    except Exception as e:
+        return {"error": True, "mensaje": f"Error procesando PDF: {e}"}

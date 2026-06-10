@@ -25,3 +25,12 @@ def test_render_ultima_pagina_devuelve_gris(tmp_path):
     assert img.dtype == np.uint8
     assert img.shape[0] > 0 and img.shape[1] > 0
     assert rect.width == 595 and rect.height == 842
+
+
+def test_recortar_region_inferior_izquierda():
+    img = np.full((1000, 800), 255, dtype=np.uint8)  # alto=1000, ancho=800
+    sub, bbox = df.recortar_region(img, (0.0, 0.60, 0.55, 1.0))
+    x0, y0, x1, y1 = bbox
+    assert (x0, y0) == (0, 600)
+    assert (x1, y1) == (440, 1000)
+    assert sub.shape == (400, 440)

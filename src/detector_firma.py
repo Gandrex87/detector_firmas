@@ -23,3 +23,15 @@ def render_ultima_pagina(pdf_path, dpi=DPI):
         return img.copy(), rect
     finally:
         doc.close()
+
+
+def recortar_region(img, region=REGION):
+    """Recorta una región (fracciones x0,y0,x1,y1) de una imagen gris.
+    Devuelve (subimagen, (px0, py0, px1, py1))."""
+    h, w = img.shape[:2]
+    fx0, fy0, fx1, fy1 = region
+    x0, y0 = int(w * fx0), int(h * fy0)
+    x1, y1 = int(w * fx1), int(h * fy1)
+    x0, x1 = max(0, x0), min(w, x1)
+    y0, y1 = max(0, y0), min(h, y1)
+    return img[y0:y1, x0:x1].copy(), (x0, y0, x1, y1)

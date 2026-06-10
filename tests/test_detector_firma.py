@@ -103,3 +103,23 @@ def test_detectar_pdf_inexistente():
     r = df.detectar("no_existe_xyz.pdf")
     assert r["error"] is True
     assert "mensaje" in r
+
+
+def test_detectar_ignora_pagina_blanca_final(tmp_path):
+    """La firma está en la penúltima página; la última es una hoja en blanco
+    residual del escáner. El detector debe analizar la página con la firma."""
+    doc = fitz.open()
+    doc.new_page(width=595, height=842)                 # pág 1
+    page2 = doc.new_page(width=595, height=842)          # pág 2: firma abajo-izq
+    page2.draw_bezier(fitz.Point(40, 760), fitz.Point(120, 700),
+                      fitz.Point(200, 800), fitz.Point(280, 740),
+                      color=(0, 0, 0), width=3)
+    page2.draw_line(fitz.Point(40, 790), fitz.Point(300, 795), color=(0, 0, 0), width=3)
+    doc.new_page(width=595, height=842)                 # pág 3: EN BLANCO (residual)
+    ruta = str(tmp_path / "con_blanco.pdf")
+    doc.save(ruta); doc.close()
+
+    r = df.detectar(ruta)
+    assert r["error"] is False
+    assert r["firmado"] is True
+    assert r["pagina"] == 2     # analizó la pág 2 (con firma), no la 3 en blanco

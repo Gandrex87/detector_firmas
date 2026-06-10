@@ -11,13 +11,35 @@ DPI = 200
 REGION = (0.00, 0.60, 0.55, 1.00)
 UMBRAL_INK = 0.010   # ratio de píxeles de tinta para considerar "firmado" (se afina con el banco de pruebas)
 AREA_MIN_TRAZO = 40  # área mínima (px) de un componente para contar como trazo
+# Una página con ratio de tinta por debajo de esto se considera en blanco
+# (hoja residual del escáner) y se ignora al buscar la página de la firma.
+PAGINA_BLANCA_MAX_INK = 0.003
+
+
+def _ink_ratio(gray):
+    """Ratio de píxeles de tinta (0..1) en una imagen gris."""
+    binaria = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 25, 15)
+    return np.count_nonzero(binaria) / binaria.size if binaria.size else 0.0
+
+
+def _indice_pagina_con_firma(doc, dpi=72):
+    """Índice de la última página con contenido, ignorando hojas en blanco
+    residuales del escáner. Si todas están en blanco, devuelve la última."""
+    for i in range(doc.page_count - 1, -1, -1):
+        pix = doc[i].get_pixmap(dpi=dpi, colorspace=fitz.csGRAY)
+        g = np.frombuffer(pix.samples, np.uint8).reshape(pix.height, pix.width)
+        if _ink_ratio(g) > PAGINA_BLANCA_MAX_INK:
+            return i
+    return doc.page_count - 1
 
 
 def render_ultima_pagina(pdf_path, dpi=DPI):
-    """Devuelve (imagen_gris_uint8, rect_pagina) de la última página."""
+    """Devuelve (imagen_gris_uint8, rect_pagina) de la última página con
+    contenido (ignora hojas en blanco residuales del escáner)."""
     doc = fitz.open(pdf_path)
     try:
-        page = doc[-1]
+        page = doc[_indice_pagina_con_firma(doc)]
         rect = page.rect
         pix = page.get_pixmap(dpi=dpi, colorspace=fitz.csGRAY)
         img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width)
@@ -82,26 +104,22 @@ def detectar(pdf_path, debug_dir=None):
         return {"error": True, "mensaje": f"No existe el archivo: {pdf_path}"}
     try:
         doc = fitz.open(pdf_path)
-        n_pag = doc.page_count
-        page = doc[-1]
+        idx = _indice_pagina_con_firma(doc)
+        page = doc[idx]
         tiene_imagen = imagen_en_region(page, REGION)
+        pix = page.get_pixmap(dpi=DPI, colorspace=fitz.csGRAY)
+        img = np.frombuffer(pix.samples, np.uint8).reshape(pix.height, pix.width).copy()
         doc.close()
 
-        img, _rect = render_ultima_pagina(pdf_path, dpi=DPI)
         region_img, bbox = recortar_region(img, REGION)
         st = score_tinta(region_img)
 
-        firmado_tinta = st["ink_ratio"] >= UMBRAL_INK and st["n_trazos"] >= 1
-        firmado = bool(firmado_tinta or tiene_imagen)
-        if tiene_imagen and not firmado_tinta:
-            metodo = "imagen"
-        elif firmado_tinta:
-            metodo = "tinta"
-        else:
-            metodo = "ninguno"
+        # La decisión se basa en la tinta del render: al rasterizar la página
+        # completa, las firmas pegadas como imagen ya quedan incluidas en esta
+        # señal. `tiene_imagen` se conserva solo como dato informativo.
+        firmado = st["ink_ratio"] >= UMBRAL_INK and st["n_trazos"] >= 1
+        metodo = "tinta" if firmado else "ninguno"
         confianza = round(min(1.0, st["ink_ratio"] / UMBRAL_INK), 3) if UMBRAL_INK else 0.0
-        if tiene_imagen:
-            confianza = max(confianza, 0.6)
 
         if debug_dir:
             os.makedirs(debug_dir, exist_ok=True)
@@ -113,7 +131,7 @@ def detectar(pdf_path, debug_dir=None):
             "firmado": firmado,
             "confianza": confianza,
             "metodo": metodo,
-            "pagina": n_pag,
+            "pagina": idx + 1,
             "region": list(bbox),
             "detalles": {**st, "imagen_en_region": tiene_imagen},
         }

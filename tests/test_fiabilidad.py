@@ -22,12 +22,12 @@ def generar_negativos_sinteticos():
     for p in sorted(glob.glob(os.path.join(FIRMADA, "*.pdf"))):
         try:
             doc = fitz.open(p)
-            page = doc[-1]
+            page = doc[df._indice_pagina_con_firma(doc)]  # misma página que analiza el detector
             r = page.rect
             fx0, fy0, fx1, fy1 = df.REGION
             zona = fitz.Rect(r.width*fx0, r.height*fy0, r.width*fx1, r.height*fy1)
             page.add_redact_annot(zona, fill=(1, 1, 1))
-            page.apply_redactions()
+            page.apply_redactions()  # blanquea los píxeles de la zona (incluye escaneos de página completa)
             destino = os.path.join(SINTET, os.path.basename(p))
             doc.save(destino)
             doc.close()

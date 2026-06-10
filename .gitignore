@@ -3,3 +3,4 @@ __pycache__/
 venv/
 .venv/
 tests/debug/
+tests/sinteticos_no_firmada/

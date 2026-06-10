@@ -137,3 +137,16 @@ def detectar(pdf_path, debug_dir=None):
         }
     except Exception as e:
         return {"error": True, "mensaje": f"Error procesando PDF: {e}"}
+
+
+if __name__ == "__main__":
+    # Uso: python src/detector_firma.py "ruta\al\documento.pdf" [carpeta_debug]
+    import sys
+    import json
+    if len(sys.argv) < 2:
+        print('Uso: python src/detector_firma.py "ruta.pdf" [carpeta_debug]')
+        sys.exit(1)
+    ruta = sys.argv[1]
+    debug = sys.argv[2] if len(sys.argv) > 2 else None
+    resultado = detectar(ruta, debug_dir=debug)
+    print(json.dumps(resultado, indent=2, ensure_ascii=False))

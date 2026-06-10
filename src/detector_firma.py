@@ -35,3 +35,22 @@ def recortar_region(img, region=REGION):
     x0, x1 = max(0, x0), min(w, x1)
     y0, y1 = max(0, y0), min(h, y1)
     return img[y0:y1, x0:x1].copy(), (x0, y0, x1, y1)
+
+
+def score_tinta(region_img):
+    """Mide presencia de tinta manuscrita en una región gris.
+    Devuelve dict con ink_ratio, n_trazos."""
+    # Binariza: tinta (oscuro) -> 255
+    binaria = cv2.adaptiveThreshold(
+        region_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+        cv2.THRESH_BINARY_INV, 25, 15,
+    )
+    total = region_img.shape[0] * region_img.shape[1]
+    ink = int(np.count_nonzero(binaria))
+    ink_ratio = ink / total if total else 0.0
+
+    # Componentes conectados: cuenta "trazos" significativos
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(binaria, connectivity=8)
+    n_trazos = int(np.count_nonzero(stats[1:, cv2.CC_STAT_AREA] >= AREA_MIN_TRAZO))
+
+    return {"ink_ratio": round(ink_ratio, 5), "n_trazos": n_trazos}

@@ -1,5 +1,6 @@
 # tests/test_detector_firma.py
 import numpy as np
+import cv2
 import fitz
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -34,3 +35,21 @@ def test_recortar_region_inferior_izquierda():
     assert (x0, y0) == (0, 600)
     assert (x1, y1) == (440, 1000)
     assert sub.shape == (400, 440)
+
+
+def test_score_tinta_region_en_blanco():
+    blanco = np.full((400, 440), 255, dtype=np.uint8)
+    r = df.score_tinta(blanco)
+    assert r["ink_ratio"] < 0.001
+    assert r["n_trazos"] == 0
+
+
+def test_score_tinta_con_trazo():
+    img = np.full((400, 440), 255, dtype=np.uint8)
+    # simula una firma: varias curvas/líneas negras
+    cv2.line(img, (40, 300), (380, 320), 0, 4)
+    cv2.line(img, (60, 340), (300, 280), 0, 3)
+    cv2.ellipse(img, (200, 310), (90, 40), 0, 0, 300, 0, 3)
+    r = df.score_tinta(img)
+    assert r["ink_ratio"] > 0.005
+    assert r["n_trazos"] >= 1

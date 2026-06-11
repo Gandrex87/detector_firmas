@@ -4,6 +4,10 @@ opencv-python>=4.9
 numpy>=1.26
 pytest>=8.0
 
+# Pruebas con YOLO (detección de firma por aprendizaje)
+ultralytics>=8.4
+huggingface_hub>=0.25
+
 # Microservicio (Fase 2) — descomentar al llegar a esa fase
 # fastapi>=0.110
 # uvicorn>=0.29

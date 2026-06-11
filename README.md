@@ -38,7 +38,7 @@ python -m venv .venv
 #    luego descargar yolov8s.pt a modelos/yolov8s-signature.pt
 
 # 3. Arrancar el microservicio
-.venv\Scripts\python.exe -m uvicorn servicio_firma:app --app-dir src --host 0.0.0.0 --port 8030
+.venv\Scripts\python.exe -m uvicorn servicio_firma:app --app-dir src --host 0.0.0.0 --port 8016
 ```
 
 Variables de entorno opcionales: `FIRMA_MODELO`, `FIRMA_CONF` (0.25), `FIRMA_PAGINAS` (2).
@@ -65,7 +65,7 @@ Códigos de error: `415` (no es PDF), `400` (vacío), `422` (PDF ilegible).
 ## Prueba rápida
 
 ```powershell
-curl -X POST http://127.0.0.1:8030/detectar-firma -F "file=@ruta\documento.pdf;type=application/pdf"
+curl -X POST http://127.0.0.1:8016/detectar-firma -F "file=@ruta\documento.pdf;type=application/pdf"
 ```
 
 O el banco de pruebas sobre las carpetas `firmada/` y `no firmada/`:

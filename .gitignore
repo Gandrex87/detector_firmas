@@ -4,5 +4,6 @@ venv/
 .venv/
 tests/debug/
 tests/sinteticos_no_firmada/
-modelos/
 tests/debug_yolo/
+
+# El modelo SÍ se versiona (decisión del proyecto): modelos/yolov8s-signature.pt

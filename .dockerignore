@@ -1,0 +1,10 @@
+.venv/
+venv/
+.git/
+.gitignore
+**/__pycache__/
+*.pyc
+tests/
+docs/
+README.md
+*.md

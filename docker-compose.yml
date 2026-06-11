@@ -1,0 +1,11 @@
+services:
+  detector-firma:
+    build: .
+    image: detector-firma-service
+    container_name: detector-firma-service
+    ports:
+      - "8016:8016"
+    restart: unless-stopped
+    environment:
+      FIRMA_CONF: "0.25"
+      FIRMA_PAGINAS: "2"

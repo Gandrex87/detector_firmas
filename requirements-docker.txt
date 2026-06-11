@@ -1,0 +1,9 @@
+# Dependencias del contenedor del microservicio (sin pytest ni utilidades de dev).
+# Torch se instala aparte en el Dockerfile (wheel CPU-only) para no traer CUDA.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+pymupdf>=1.24
+opencv-python>=4.9
+numpy>=1.26
+ultralytics>=8.4

@@ -1,7 +1,7 @@
 """Microservicio de detección de firma manuscrita en Notas de Encargo.
 
 Arranque:
-  .venv\\Scripts\\python.exe -m uvicorn servicio_firma:app --app-dir src --host 0.0.0.0 --port 8030
+  .venv\\Scripts\\python.exe -m uvicorn servicio_firma:app --app-dir src --host 0.0.0.0 --port 8016
 
 Variables de entorno opcionales:
   FIRMA_MODELO   ruta al .pt de YOLO (por defecto modelos/yolov8s-signature.pt)

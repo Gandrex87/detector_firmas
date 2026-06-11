@@ -7,3 +7,4 @@ pymupdf>=1.24
 opencv-python>=4.9
 numpy>=1.26
 ultralytics>=8.4
+pyhanko>=0.25

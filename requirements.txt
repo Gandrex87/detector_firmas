@@ -8,6 +8,9 @@ pytest>=8.0
 ultralytics>=8.4
 huggingface_hub>=0.25
 
+# Firma digital (PAdES) — pyHanko es Python puro, sin dependencias de sistema
+pyhanko>=0.25
+
 # Microservicio (Fase 2)
 fastapi>=0.110
 uvicorn>=0.29

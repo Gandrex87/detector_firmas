@@ -13,6 +13,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from ultralytics import YOLO
 
 import firma_yolo
+import firma_digital
 
 _AQUI = os.path.dirname(os.path.abspath(__file__))
 MODELO = os.environ.get(
@@ -32,20 +33,45 @@ def health():
             "conf": CONF, "n_paginas": N_PAGINAS}
 
 
+# Endpoint síncrono a propósito: pyHanko usa asyncio.run() internamente (rompería
+# dentro de un endpoint async) y FastAPI ejecuta los endpoints `def` en un threadpool,
+# evitando además que la inferencia YOLO bloquee el bucle de eventos.
 @app.post("/detectar-firma")
-async def detectar_firma(file: UploadFile = File(...)):
+def detectar_firma(file: UploadFile = File(...)):
     nombre = (file.filename or "").lower()
     if file.content_type not in ("application/pdf", "application/octet-stream") \
             and not nombre.endswith(".pdf"):
         raise HTTPException(status_code=415,
                             detail=f"Solo se aceptan PDF. Recibido: {file.content_type or nombre}")
-    data = await file.read()
+    data = file.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Archivo vacío.")
 
-    resultado = firma_yolo.detectar_firma(
-        _modelo, pdf_bytes=data, conf=CONF, n_paginas=N_PAGINAS)
+    # Capa 1: firma digital (determinista y barata, no renderiza).
+    dig = firma_digital.detectar_firma_digital(pdf_bytes=data)
+    if not dig.get("error") and dig.get("tiene_firma_digital"):
+        return {
+            "error": False,
+            "firmado": True,
+            "tipo_firma": "digital",
+            "confianza": 1.0,
+            "n_firmas_digitales": dig["n_firmas"],
+            "firmas_digitales": dig["firmas"],
+        }
 
-    if resultado.get("error"):
-        raise HTTPException(status_code=422, detail=resultado["mensaje"])
-    return resultado
+    # Capa 2: firma manuscrita (YOLO sobre las últimas páginas).
+    vis = firma_yolo.detectar_firma(
+        _modelo, pdf_bytes=data, conf=CONF, n_paginas=N_PAGINAS)
+    if vis.get("error"):
+        raise HTTPException(status_code=422, detail=vis["mensaje"])
+
+    return {
+        "error": False,
+        "firmado": vis["firmado"],
+        "tipo_firma": "manuscrita" if vis["firmado"] else "ninguna",
+        "confianza": vis["confianza"],
+        "n_detecciones": vis["n_detecciones"],
+        "paginas_escaneadas": vis["paginas_escaneadas"],
+        "detecciones": vis["detecciones"],
+        "parametros": vis["parametros"],
+    }

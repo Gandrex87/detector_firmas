@@ -9,9 +9,11 @@ RUN apt-get update \
 
 COPY requirements-docker.txt .
 
-# Torch CPU-only desde el índice oficial de PyTorch: evita descargar ~2 GB de
-# librerías CUDA inútiles en un servidor sin GPU. Luego el resto de dependencias.
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+# Torch + torchvision CPU-only desde el índice oficial de PyTorch: evita ~2 GB de
+# CUDA y, sobre todo, garantiza que torch y torchvision sean versiones COMPATIBLES
+# (si torchvision se instala desde PyPI por defecto, falla con
+# "operator torchvision::nms does not exist"). Luego el resto de dependencias.
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir -r requirements-docker.txt
 
 # Código y modelo

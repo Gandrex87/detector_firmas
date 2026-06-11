@@ -29,20 +29,34 @@ modelos/
   yolov8s-signature.pt   # modelo preentrenado de firmas
 ```
 
-## Puesta en marcha
+## Despliegue con Docker (recomendado)
+
+El modelo (`modelos/yolov8s-signature.pt`) ya viene incluido en el repo, así que el
+despliegue es directo. El servicio escucha en el puerto **8016**.
+
+```bash
+git clone https://github.com/Gandrex87/detector_firmas.git detector_firmas
+cd detector_firmas
+docker compose up -d --build      # la 1ª build descarga torch CPU + ultralytics
+
+docker ps | grep detector-firma   # debe verse (healthy) tras ~45s
+curl http://localhost:8016/health
+```
+
+El `Dockerfile` usa `python:3.11-slim`, instala las librerías de sistema de OpenCV
+(`libgl1`, `libglib2.0-0`), torch/torchvision **CPU-only** y pyHanko (Python puro).
+
+## Puesta en marcha local (sin Docker)
 
 ```powershell
-# 1. Entorno
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 2. Modelo (gated en HuggingFace: aceptar términos + login una vez)
-#    https://huggingface.co/tech4humans/yolov8s-signature-detector
-#    luego descargar yolov8s.pt a modelos/yolov8s-signature.pt
-
-# 3. Arrancar el microservicio
 .venv\Scripts\python.exe -m uvicorn servicio_firma:app --app-dir src --host 0.0.0.0 --port 8016
 ```
+
+> El modelo de firmas (`tech4humans/yolov8s-signature-detector`, AGPL) ya está en
+> `modelos/`. Si hubiera que regenerarlo: está *gated* en HuggingFace
+> (aceptar términos + login) y se descarga como `yolov8s.pt`.
 
 Variables de entorno opcionales: `FIRMA_MODELO`, `FIRMA_CONF` (0.25), `FIRMA_PAGINAS` (2).
 
@@ -96,3 +110,12 @@ O el banco de pruebas sobre las carpetas `firmada/` y `no firmada/`:
 ```powershell
 .venv\Scripts\python.exe tests\test_yolo_firma.py
 ```
+
+## Integración en n8n
+
+El flujo `Validador NOTA_DE_ENCARGO - CATASTRO` lo llama por la IP del host:
+`POST http://10.1.0.188:8016/detectar-firma` (campo binario `file`).
+
+Durante pruebas corre en modo *shadow*: se conecta **después** del
+`Respond - NOTA DE ENCARGO` (la respuesta a producción ya salió, impacto cero) y
+registra cada resultado en la tabla Postgres `pruebas_firma`.

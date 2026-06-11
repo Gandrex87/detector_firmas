@@ -8,7 +8,7 @@ pytest>=8.0
 ultralytics>=8.4
 huggingface_hub>=0.25
 
-# Microservicio (Fase 2) — descomentar al llegar a esa fase
-# fastapi>=0.110
-# uvicorn>=0.29
-# python-multipart>=0.0.9
+# Microservicio (Fase 2)
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9

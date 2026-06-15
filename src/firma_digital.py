@@ -24,6 +24,18 @@ def _emisor(cert):
     return " / ".join(x for x in partes if x) or "(desconocido)"
 
 
+def _es_sello_tiempo(sig):
+    """True si el objeto embebido es un sello de tiempo (DocTimeStamp / RFC3161),
+    no una firma de persona. pyHanko los lista junto a las firmas."""
+    try:
+        obj = sig.sig_object
+        tipo = str(obj.get("/Type", ""))
+        subfilter = str(obj.get("/SubFilter", ""))
+        return tipo == "/DocTimeStamp" or "RFC3161" in subfilter
+    except Exception:
+        return False
+
+
 def detectar_firma_digital(pdf_path=None, pdf_bytes=None, validar=True):
     """Detecta firmas digitales PAdES embebidas en el PDF.
     Pasa `pdf_path` o `pdf_bytes`. Nunca lanza ante un PDF inválido."""
@@ -38,7 +50,11 @@ def detectar_firma_digital(pdf_path=None, pdf_bytes=None, validar=True):
         vc = ValidationContext(allow_fetching=False) if validar else None
 
         firmas = []
+        n_sellos_tiempo = 0
         for sig in sigs:
+            if _es_sello_tiempo(sig):
+                n_sellos_tiempo += 1
+                continue  # un sello de tiempo no es una firma de persona
             cert = sig.signer_cert
             info = {
                 "campo": sig.field_name,
@@ -61,6 +77,7 @@ def detectar_firma_digital(pdf_path=None, pdf_bytes=None, validar=True):
             "error": False,
             "tiene_firma_digital": len(firmas) > 0,
             "n_firmas": len(firmas),
+            "n_sellos_tiempo": n_sellos_tiempo,
             "firmas": firmas,
         }
     except Exception as e:
